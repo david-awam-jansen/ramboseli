@@ -15,7 +15,7 @@ subset_members <- function(babase, .adults_only = TRUE) {
   }
 
   # babase-tables -----------------------------------------------------------
-
+  message("Added mature dates to males...")
   message("Creating connections to babase tables...")
 
   # Database connections
@@ -26,8 +26,8 @@ subset_members <- function(babase, .adults_only = TRUE) {
   behave_gaps <- dplyr::tbl(babase, "behave_gaps")
   members <- dplyr::tbl(babase, "members")
 
-  md_females <- maturedates %>%
-    dplyr::semi_join(dplyr::filter(biograph, sex == "F"), by = "sname")
+  md_snames <- maturedates %>%
+    dplyr::semi_join(biograph, by = "sname")
 
   rd_males <- rankdates %>%
     dplyr::semi_join(dplyr::filter(biograph, sex == "M"), by = "sname")
@@ -44,7 +44,7 @@ subset_members <- function(babase, .adults_only = TRUE) {
 
   members_keep <- members %>%
     dplyr::inner_join(dplyr::select(biograph, sname, sex), by = "sname") %>%
-    dplyr::left_join(dplyr::select(md_females, sname, matured), by = "sname") %>%
+    dplyr::left_join(dplyr::select(md_snames, sname, matured), by = "sname") %>%
     dplyr::left_join(dplyr::select(rd_males, sname, ranked), by = "sname") %>%
     dplyr::inner_join(dplyr::select(groups_history, gid, permanent, impermanent, last_reg_census),
                       by = c("grp" = "gid")) %>%
@@ -72,7 +72,7 @@ subset_members <- function(babase, .adults_only = TRUE) {
   # Second part
   members_remove <- members %>%
     dplyr::inner_join(dplyr::select(biograph, sname, sex), by = "sname") %>%
-    dplyr::left_join(dplyr::select(md_females, sname, matured), by = "sname") %>%
+    dplyr::left_join(dplyr::select(md_snames, sname, matured), by = "sname") %>%
     dplyr::left_join(dplyr::select(rd_males, sname, ranked), by = "sname") %>%
     dplyr::select(grp, sname, date, sex, matured, ranked) %>%
     dplyr::collect()
@@ -113,6 +113,14 @@ subset_members <- function(babase, .adults_only = TRUE) {
     dplyr::group_by(sname, yearmon) %>%
     dplyr::mutate(grps = paste(sort(unique(grp)), collapse = " ")) %>%
     dplyr::ungroup()
+  ## Make a column that states if individual is an juvenile of any sex or
+  ## an adult female or male
+  members_l <- members_l %>%
+  mutate(sex_class = case_when(date < matured | is.na(matured) ~ "JUV",
+                               sex == "F" & date >= matured ~ "AF",
+                               sex == "M" & date >= ranked ~ "AM",
+                               sex == "M" & date >= matured &
+                                 (date < ranked | is.na(ranked))~ "SM"))
 
   return(members_l)
 }
@@ -338,6 +346,8 @@ subset_interactions <- function(babase, members_l, my_acts = NULL, .adults_only 
              is_actee_adult = (actee_sex == "F" & date >= actee_matured) |
                (actee_sex == "M" & date >= actee_ranked)) %>%
       tidyr::replace_na(list(is_actor_adult = FALSE, is_actee_adult = FALSE))
+
+    message("We need to concider what to do to sub-adult males")
   }
 
   inter <- inter %>%
@@ -480,8 +490,8 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
   # Local
   biograph_l <- dplyr::collect(biograph)
 
-  md_females <- maturedates %>%
-    dplyr::semi_join(dplyr::filter(biograph, sex == "F"), by = "sname")
+  md_snames <- maturedates %>%
+    dplyr::semi_join(biograph , by = "sname")
 
   rd_males <- rankdates %>%
     dplyr::semi_join(dplyr::filter(biograph, sex == "M"), by = "sname")
@@ -503,7 +513,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
   message("Creating individual-year-of-life data set...")
 
   iyol <- biograph %>%
-    dplyr::left_join(dplyr::select(md_females, sname, matured), by = "sname") %>%
+    dplyr::left_join(dplyr::select(md_snames, sname, matured), by = "sname") %>%
     dplyr::left_join(dplyr::select(rd_males, sname, ranked), by = "sname") %>%
     dplyr::select(sname, sex, birth, statdate, matured, ranked) %>%
     dplyr::collect()
@@ -517,6 +527,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
       tidyr::drop_na(first_start_date) %>%
       dplyr::select(sname, sex, birth, first_start_date, statdate, -ranked, -matured)
   } else {
+    message("Currently this makes dataset that goes from birth until statdate with a row per year, ideally it should go from birth until matured for juveniles.")
     iyol <- iyol %>%
       dplyr::mutate(first_start_date = dplyr::case_when(
         sex == "F" ~ birth,
