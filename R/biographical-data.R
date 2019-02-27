@@ -26,8 +26,7 @@ subset_members <- function(babase, .adults_only = TRUE) {
   behave_gaps <- dplyr::tbl(babase, "behave_gaps")
   members <- dplyr::tbl(babase, "members")
 
-  md_snames <- maturedates %>%
-    dplyr::semi_join(biograph, by = "sname")
+  md_snames <- maturedates
 
   rd_males <- rankdates %>%
     dplyr::semi_join(dplyr::filter(biograph, sex == "M"), by = "sname")
@@ -490,8 +489,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
   # Local
   biograph_l <- dplyr::collect(biograph)
 
-  md_snames <- maturedates %>%
-    dplyr::semi_join(biograph , by = "sname")
+  md_snames <- maturedates
 
   rd_males <- rankdates %>%
     dplyr::semi_join(dplyr::filter(biograph, sex == "M"), by = "sname")
@@ -525,7 +523,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
         sex == "M" ~ ranked
       )) %>%
       tidyr::drop_na(first_start_date) %>%
-      dplyr::select(sname, sex, birth, first_start_date, statdate, -ranked, -matured)
+      dplyr::select(sname, sex, birth, first_start_date, ranked, matured, statdate)
   } else {
     message("Currently this makes dataset that goes from birth until statdate with a row per year, ideally it should go from birth until matured for juveniles.")
     iyol <- iyol %>%
@@ -534,7 +532,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
         sex == "M" ~ birth
       )) %>%
       tidyr::drop_na(first_start_date) %>%
-      dplyr::select(sname, sex, birth, first_start_date, statdate, -ranked, -matured)
+      dplyr::select(sname, sex, birth, first_start_date, ranked, matured, statdate)
   }
 
   make_bday_seq <- function(df) {
@@ -619,6 +617,13 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
     dplyr::mutate(midpoint = start + floor((end - start) / 2),
                   age_start_yrs = as.numeric(start - birth) / 365.25,
                   age_class = floor(plyr::round_any(age_start_yrs, 0.005)) + 1)
+
+  iyol <- iyol %>%
+    mutate(sex_class = case_when(start < matured | is.na(matured) ~ "JUV",
+                                 sex == "F" & start >= matured ~ "AF",
+                                 sex == "M" & start >= ranked ~ "AM",
+                                 sex == "M" & start >= matured &
+                                   (start < ranked | is.na(ranked))~ "SM"))
 
   # NOTES:
   # Original SCI scipt produces error in dates for RUT
