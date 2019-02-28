@@ -2,9 +2,11 @@ Package: ramboseli
 Type: Package
 Title: Utility functions for the babase database
 Version: 0.1.0
-Authors@R: person("Fernando", "Campos", email = "camposfa@gmail.com",
-  role = c("aut", "cre"))
-Maintainer: Fernando Campos <camposfa@gmail.com>
+Authors@R: c(
+    person("Fernando", "Campos", email = "camposfa@gmail.com",
+      role = c("aut", "cre")),
+    person("Jansen", "David", email = "david.awam.jansen@gmail.com", role = "aut"))
+Maintainer: Fernando Campos <camposfa@gmail.com> & David Jansen <david.awam.jansen@gmail.com>
 Description: Utility functions for the babase database
 Encoding: UTF-8
 LazyData: true
@@ -17,6 +19,9 @@ Imports:
     tidyverse (>= 1.2.1),
     dbplyr (>= 1.1.0),
     purrrlyr (>= 0.0.2),
-    RPostgreSQL (>= 0.6-2),
     zoo (>= 1.8-0)
+Suggests:
+    RPostgreSQL (>= 0.6-2)    
+    
+    
 RoxygenNote: 6.0.1
