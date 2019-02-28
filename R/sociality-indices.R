@@ -258,9 +258,9 @@ sci <- function(my_iyol, members_l, focals_l, females_l, interactions_l,
   # Return an empty tibble if the subset is empty
   if (is.null(my_iyol) |
       !all(names(my_iyol) %in% c("sname", "grp", "start", "end", "days_present", "sex",
-                                 "birth", "first_start_date", "statdate", "birth_dates",
-                                 "midpoint", "age_start_yrs", "age_class", "obs_date")) |
-      min_res_days < 0) {
+                                 "birth", "first_start_date", "matured", "ranked","statdate",
+                                 "birth_dates",  "midpoint", "age_start_yrs", "age_class",
+                                 "obs_date", "sex_class")) | min_res_days < 0) {
     stop("Problem with input data. Use the 'make_iyol' or 'make_target_df' function to create the input.")
   }
 
