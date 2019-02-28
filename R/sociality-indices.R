@@ -183,7 +183,7 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
       tidyr::replace_na(list(ItoM = 0, IfromM = 0))
   }
 
-  if (include_males) {
+  if (df$sex_class == 'JUV') {
     my_subset <- my_subset %>%
       dplyr::left_join(gg_j, by = c("grp", "sname")) %>%
       dplyr::left_join(gr_j, by = c("grp", "sname"))
@@ -215,6 +215,18 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
                       TRUE ~ log2(IfromM_daily)))
   }
 
+  if (df$sex_class == "JUV") {
+    my_subset <- my_subset %>%
+      dplyr::mutate(ItoJ_daily = ItoJ / days_present,
+                    log2ItoJ_daily = dplyr::case_when(
+                      ItoJ == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(ItoJ_daily)),
+                    IfromJ_daily = IfromJ / days_present,
+                    log2IfromJ_daily = dplyr::case_when(
+                      IfromJ == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(IfromJ_daily)))
+  }
+
   my_subset$SCI_F_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoF_daily ~ log2OE)))
   my_subset$SCI_F_Rec <- as.numeric(residuals(lm(data = my_subset, log2IfromF_daily ~ log2OE)))
 
@@ -223,10 +235,18 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
     my_subset$SCI_M_Rec <- as.numeric(residuals(lm(data = my_subset, log2IfromM_daily ~ log2OE)))
   }
 
+  if (df$sex_class == "JUV") {
+    my_subset$SCI_J_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoJ_daily ~ log2OE)))
+    my_subset$SCI_J_Rec <- as.numeric(residuals(lm(data = my_subset, log2IfromJ_daily ~ log2OE)))
+  }
+
   if (!directional) {
     my_subset$SCI_F <- (my_subset$SCI_F_Dir + my_subset$SCI_F_Rec) / 2
     if (include_males) {
       my_subset$SCI_M <- (my_subset$SCI_M_Dir + my_subset$SCI_M_Rec) / 2
+    }
+    if (df$sex_class == "JUV") {
+      my_subset$SCI_J <- (my_subset$SCI_J_Dir + my_subset$SCI_J_Rec) / 2
     }
   }
 
