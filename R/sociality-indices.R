@@ -285,7 +285,7 @@ sci <- function(my_iyol, members_l, focals_l, females_l, interactions_l,
   }
 
   if (parallel) {
-    avail_cores <- detectCores()
+    avail_cores <- detectCores() -1
     if (!is.null(ncores)) {
       if (ncores > avail_cores) {
         message(paste0("Ignoring 'ncores' argument because only ", avail_cores,
@@ -298,7 +298,7 @@ sci <- function(my_iyol, members_l, focals_l, females_l, interactions_l,
       ncores <- avail_cores
     }
 
-    cl <- makeCluster(ncores)
+    cl <- makeCluster(ncores, outfile = "")
     registerDoSNOW(cl)
     pb <- txtProgressBar(min = 0, max = nrow(my_iyol), style = 3)
     progress <- function(n) setTxtProgressBar(pb, n)
@@ -380,7 +380,7 @@ dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l, in
   }
 
   if (parallel) {
-    avail_cores <- detectCores()
+    avail_cores <- detectCores() -1
     if (!is.null(ncores)) {
       if (ncores > avail_cores) {
         message(paste0("Ignoring 'ncores' argument because only ", avail_cores,
@@ -393,7 +393,7 @@ dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l, in
       ncores <- avail_cores
     }
 
-    cl <- makeCluster(ncores)
+    cl <- makeCluster(ncores, outfile = "")
     registerDoSNOW(cl)
     pb <- txtProgressBar(min = 0, max = nrow(my_iyol), style = 3)
     progress <- function(n) setTxtProgressBar(pb, n)
