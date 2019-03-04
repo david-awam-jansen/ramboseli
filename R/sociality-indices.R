@@ -1,3 +1,7 @@
+.onAttach <- function(libname, pkgname) {
+  packageStartupMessage(paste0("This code was last updated on ", Sys.time()))
+}
+
 get_mem_dates <- function(my_sub, members_l, df, sel = NULL) {
 
   mem_dates <- my_sub %>%
@@ -63,10 +67,12 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
   zero_daily_count <- 1/365.25
   log_zero_daily_count <- log2(zero_daily_count)
   my_sname <- df$sname
+  my_sex_class <= df$sex_class
 
   # Allow focal animal only to be a non-adult (for early adversity analysis)
   my_members <- members_l %>%
-    filter(sname == my_sname | (sex == "F" & date >= matured) | (sex == "M" & date >= ranked))
+    filter(sex_class == my_sex_class)
+    #filter(sname == my_sname | (sex == "F" & date >= matured) | (sex == "M" & date >= ranked))
 
   # Get all members of same sex as the focal animal during relevant time period
   my_subset <- my_members %>%
@@ -77,7 +83,6 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
                      start = min(date),
                      end = max(date))
 
-<<<<<<< HEAD
 # This needs to be checked.
 message("Was this checked")
 
