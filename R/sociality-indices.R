@@ -64,14 +64,22 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
   log_zero_daily_count <- log2(zero_daily_count)
   my_sname <- df$sname
 
+  # Allow focal animal only to be a non-adult (for early adversity analysis)
+  my_members <- members_l %>%
+    filter(sname == my_sname | (sex == "F" & date >= matured) | (sex == "M" & date >= ranked))
+
   # Get all members of same sex as the focal animal during relevant time period
-  my_subset <- members_l %>%
+  my_subset <- my_members %>%
     dplyr::inner_join(select(df, -sname, -grp), by = c("sex_class")) %>%
     dplyr::filter(date >= start & date <= end) %>%
     dplyr::group_by(sname, grp, sex_class) %>%
     dplyr::summarise(days_present = n(),
                      start = min(date),
                      end = max(date))
+
+<<<<<<< HEAD
+# This needs to be checked.
+message("Was this checked")
 
   # To allow animals to be non-adults only if focal is not adults
   # Should not  affect results for adults
@@ -85,7 +93,7 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
 
   ## Focal counts
   # Get all focals during relevant time period in grp
-  my_focals <- get_mem_dates(my_subset, members_l, focals_l, sel = quo(sum))
+  my_focals <- get_mem_dates(my_subset, my_members, focals_l, sel = quo(sum))
 
   ## Observation days
   # Focal animal was present and at least one focal sample was collected
@@ -101,7 +109,7 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
     dplyr::summarise(n_focals = sum(sum))
 
   ## Female counts
-  my_females <- get_mem_dates(my_subset, members_l, females_l, sel = quo(nr_females)) %>%
+  my_females <- get_mem_dates(my_subset, my_members, females_l, sel = quo(nr_females)) %>%
     dplyr::group_by(grp, sname) %>%
     dplyr::summarise(mean_f_count = mean(nr_females))
 
