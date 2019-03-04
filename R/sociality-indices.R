@@ -67,7 +67,7 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
   zero_daily_count <- 1/365.25
   log_zero_daily_count <- log2(zero_daily_count)
   my_sname <- df$sname
-  my_sex_class <= df$sex_class
+  my_sex_class <- df$sex_class
 
   # Allow focal animal only to be a non-adult (for early adversity analysis)
   my_members <- members_l %>%
