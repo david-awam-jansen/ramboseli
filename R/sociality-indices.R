@@ -358,7 +358,6 @@ sci <- function(my_iyol, members_l, focals_l, females_l, interactions_l,
   return(res)
 }
 
-
 #' Calculate dyadic index variables from individual-year-of-life data
 #'
 #' @param my_iyol Individual-year-of-life data.
@@ -387,7 +386,8 @@ dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l, in
   if (is.null(my_iyol) |
       !all(names(my_iyol) %in% c("sname", "grp", "start", "end", "days_present", "sex",
                                  "birth", "first_start_date", "statdate", "birth_dates",
-                                 "midpoint", "age_start_yrs", "age_class", "obs_date")) |
+                                 "midpoint", "age_start_yrs", "age_class", "obs_date",
+                                 "matured", "ranked", "sex_class")) |
       min_cores_days < 0) {
     stop("Problem with input data. Use the 'make_iyol' or 'make_target_df' function to create the input.")
   }
@@ -470,14 +470,20 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
                               directional) {
 
   # Find and return all co-residence dates for focal_sname and partner_sname in my_members
-  get_overlap_dates <- function(focal_sname, partner_sname, focal_grp, partner_grp) {
+  get_overlap_dates <- function(focal_sname, partner_sname,
+                                focal_grp, partner_grp,
+                                focal_sex_class, partner_sex_class) {
 
     focal_dates <- my_members %>%
-      dplyr::filter(sname == focal_sname & grp == focal_grp) %>%
+      dplyr::filter(sname == focal_sname &
+                      grp == focal_grp &
+                      sex_class == focal_sex_class) %>%
       dplyr::pull(date)
 
     partner_dates <- my_members %>%
-      dplyr::filter(sname == partner_sname & grp == partner_grp) %>%
+      dplyr::filter(sname == partner_sname &
+                      grp == partner_grp &
+                      sex_class == partner_sex_class) %>%
       dplyr::pull(date)
 
     overlap_dates <- dplyr::intersect(focal_dates, partner_dates)
@@ -508,10 +514,17 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   }
 
   # Return grooming by actor to actee during co-residence dates
-  get_interactions <- function(my_actor, my_actee, focal_grp, partner_grp) {
+  get_interactions <- function(my_actor, my_actee,
+                               focal_grp, partner_grp,
+                               f0cal_sex_class, partner_sex_class) {
 
     res <- my_interactions %>%
-      dplyr::filter(actor == my_actor & actor_grp == focal_grp & actee == my_actee & actee_grp == partner_grp)
+      dplyr::filter(actor == my_actor &
+                    actor_grp == focal_grp &
+                    actor_sex_class == focal_sex_class &
+                    actee == my_actee &
+                    actee_grp == partner_grp &
+                    actee_sex_class == partner_sex_class)
 
     return(nrow(res))
   }
@@ -520,6 +533,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_sname <- df$sname
   my_start <- df$start
   my_end <- df$end
+  my_sex_class <- df$sex_class
 
   # Put some subsets in environment for faster performance
   if (within_grp) {
@@ -553,20 +567,37 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   } else {
     my_members <- dplyr::filter(members_l, date >= my_start & date <= my_end)
 
+    # This block filters out all interactions with juveniles if focal is adult
+    if(df$sex_class %in% c("AM", "AF")) {
+      my_members <- my_members %>%
+        dplyr::filter((is_actor_adult & is_actee_adult) )
+    }
+
     # This line allows for the focal animal only to be represented as a non-adult
-    my_members <- dplyr::filter(my_members, (sex == "F" & (date >= matured | sname == my_sname)) |
-                                  (sex == "M" & (date >= ranked | sname == my_sname)))
+    # my_members <- dplyr::filter(my_members,
+    #                             (sex == "F" & (date >= matured | sname == my_sname)) |
+    #                             (sex == "M" & (date >= ranked | sname == my_sname)))
 
     my_focals <- dplyr::filter(focals_l, date >= my_start & date <= my_end)
     my_females <- dplyr::filter(females_l, date >= my_start & date <= my_end)
 
     my_interactions <- dplyr::filter(interactions_l, date >= my_start & date <= my_end)
 
+    # This block filters out all interactions with juveniles if focal is adult
+    if(df$sex_class %in% c("AM", "AF")) {
+      my_interactions <- interactions_l %>%
+        dplyr::filter((is_actor_adult & is_actee_adult) )
+    } else {
+      # This block filters out all interactions with only adults if focal is juvenile
+      my_interactions <- interactions_l %>%
+        dplyr::filter(!(is_actor_adult & is_actee_adult))
+    }
+
     # This line allows for the focal animal only to be represented as a non-adult
-    my_interactions <- my_interactions %>%
-      dplyr::filter((is_actor_adult & is_actee_adult) |
-                      (is_actor_adult & actee == my_sname) |
-                      (is_actee_adult & actor == my_sname))
+    # my_interactions <- my_interactions %>%
+    #   dplyr::filter((is_actor_adult & is_actee_adult) |
+    #                   (is_actor_adult & actee == my_sname) |
+    #                   (is_actee_adult & actor == my_sname))
 
     if (any(map_int(list(my_members, my_females, my_focals, my_interactions),
                     nrow) == 0)) {
@@ -578,7 +609,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     # number of days present, first date, last date
     my_subset <- my_members %>%
       dplyr::rename(sname_sex = sex) %>%
-      dplyr::group_by(sname, grp, sname_sex) %>%
+      dplyr::rename(sname_sex_class = sex_class) %>%
+      dplyr::group_by(sname, grp, sname_sex, sname_sex_class) %>%
       dplyr::summarise(days_present = n(),
                        start = min(date),
                        end = max(date))
@@ -587,14 +619,20 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   # For each of these records, find all possible dyad partners
   # Store as new list column and unnest to expand
   dyads <- my_subset %>%
-    dplyr::mutate(partner = list(my_subset$sname[my_subset$sname != sname])) %>%
-    tidyr::unnest()
+    unite("temp", sname, sname_sex_class, remove = FALSE) %>%
+    dplyr::mutate(partner_temp = list(my_subset$temp)) %>%
+    unnest() %>%
+    separate(partner_temp, c("partner", "partner_sex_class"), remove = FALSE) %>%
+    #select(-temp) %>%
+    filter(sname != partner)
 
   # Get sex and grp of partner
   # Remove dyads not in same groups
   dyads <- dyads %>%
-    dplyr::inner_join(dplyr::select(my_subset, partner = sname,
-                                    partner_sex = sname_sex, partner_grp = grp),
+    dplyr::inner_join(dplyr::select(my_subset,
+                                    partner = sname,
+                                    partner_sex = sname_sex,
+                                    partner_grp = grp),
                       by = "partner") %>%
     dplyr::filter(grp == partner_grp)
 
@@ -604,22 +642,28 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   # That's true here, so remove duplicate dyads
   my_subset <- dyads %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(tmp = paste(grp, sort(c(sname, partner)), collapse = '')) %>%
+    dplyr::mutate(tmp = paste(grp, sort(c(temp, partner_temp)), collapse = '')) %>%
     dplyr::distinct(tmp, .keep_all = TRUE) %>%
-    dplyr::select(-tmp) %>%
+    dplyr::select(-tmp, -temp, -partner_temp) %>%
     dplyr::ungroup()
 
   # Remove male-male dyads for grooming
   if (interactions_l$act[[1]] == "G") {
     my_subset <- my_subset %>%
-      dplyr::filter(!(sname_sex == "M" & partner_sex == "M"))
+      dplyr::filter(!(sname_sex_class == "AM" & partner_sex_class == "AM"))
   }
+
+  # Remove all dyads where not at least one of the two is the correct sex_class
+  my_subset <- my_subset %>%
+      dplyr::filter(sname_sex_class == df$sex_class | partner_sex_class == df$sex_class)
 
   ## Co-residence dates
   # Find all dates during which focal and partner co-resided in my_grp
   # Get a count of these dates
   my_subset <- my_subset %>%
-    dplyr::mutate(coresidence_dates = purrr::pmap(list(sname, partner, grp, partner_grp),
+    dplyr::mutate(coresidence_dates = purrr::pmap(list(sname, partner,
+                                                       grp, partner_grp,
+                                                       sname_sex_class, partner_sex_class),
                                                   get_overlap_dates)) %>%
     dplyr::rowwise() %>%
     dplyr::mutate(coresidence_days = length(coresidence_dates)) %>%
@@ -662,9 +706,13 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   # i_given is behavior given by sname to partner
   # i_received is behavior received by sname from partner
   my_subset <- my_subset %>%
-    dplyr::mutate(i_given = purrr::pmap_dbl(list(sname, partner, grp, partner_grp),
+    dplyr::mutate(i_given = purrr::pmap_dbl(list(sname, partner,
+                                                 grp, partner_grp,
+                                                 sname_sex_clas, partner_sex_class),
                                      get_interactions),
-           i_received = purrr::pmap_dbl(list(partner, sname, partner_grp, grp),
+           i_received = purrr::pmap_dbl(list(partner, sname,
+                                             partner_grp, grp,
+                                             partner_sex_class, sname_sex_class),
                                         get_interactions),
            i_total = i_given + i_received)
 
@@ -680,7 +728,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     my_subset <- my_subset %>%
       dplyr::rowwise() %>%
       dplyr::mutate(dyad = paste(sort(c(sname, partner)), collapse = '-'),
-                    dyad_type = paste(sort(c(sname_sex, partner_sex)), collapse = '-')) %>%
+                    dyad_type = paste(sort(c(sname_sex_class, partner_sex_class)), collapse = '-')) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(dyad_type) %>%
       tidyr::nest()
@@ -692,10 +740,11 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
 
     # Reorganize columns
     my_subset <- my_subset %>%
-      dplyr::select(sname, sname_sex, partner, partner_sex, everything()) %>%
-      dplyr::arrange(sname, partner)
-  } else {
+      dplyr::select(sname, sname_sex, sname_sex_class, partner, partner_sex, partner_sex_class, everything()) %>%
+      dplyr::arrange(sname, sname_sex_class, partner, partner_sex_class)
+    } else {
     # Behaviors for which direction needs to be preserved, e.g., agonism
+    message("This has not yet been coded for the juvenile version")
 
     # Duplicate each row to have one for sname->partner and one for partner->sname:
     sub_d1 <- my_subset %>%
@@ -740,10 +789,10 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
                     partner = anim2, partner_grp = anim2_grp,
                     partner_sex = anim2_sex, everything()) %>%
       dplyr::arrange(sname, partner)
-  }
-
+    }
   return(my_subset)
 }
+
 
 #' Fit dyadic index regression on subset of data
 #'
