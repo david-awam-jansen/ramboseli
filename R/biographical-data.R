@@ -1,4 +1,3 @@
-
 #' Obtain a subset of members table that excludes behavioral observation gaps.
 #'
 #' @param babase A DBI connection to the babase database
@@ -472,7 +471,7 @@ subset_interactions <- function(babase, members_l, my_acts = NULL, .adults_only 
 #'
 #' @examples
 make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
-                      .by_grp = TRUE, .adults_only = TRUE) {
+                      .by_grp = TRUE, .adults_only = TRUE, .exact_dates = TRUE) {
 
   if (class(babase) != "PostgreSQLConnection") {
     stop("Invalid connection to babase.")
@@ -525,7 +524,6 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
       tidyr::drop_na(first_start_date) %>%
       dplyr::select(sname, sex, birth, first_start_date, ranked, matured, statdate)
   } else {
-    message("Currently this makes dataset that goes from birth until statdate with a row per year, ideally it should go from birth until matured for juveniles.")
     iyol <- iyol %>%
       dplyr::mutate(first_start_date = dplyr::case_when(
         sex == "F" ~ birth,
@@ -563,6 +561,41 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
       is.na(end) ~ birth_dates - lubridate::days(1) + lubridate::years(1),
       end > statdate ~ statdate,
       TRUE ~ end))
+
+  ## If exact_dates is TRUE then if .adult_only = FALSE is splits the years where
+  ## animals mature or get ranked into the days prior to and after the mature/ranked date.
+  ## Rest of the line remains from birthday until birthday.
+  if(.exact_dates == TRUE & .adults_only == FALSE) {
+    message("Currently this makes dataset that goes from birth until birth day with the exception of years where the indvidual reaches maturation or is ranked. In those years their is a line from birthday until maturation and maturation until birthday.")
+    iyol <- iyol %>%
+      filter(sname == 'ACA' | sname == "ADD") %>%
+      mutate(test = case_when(
+        sex == 'F' & matured > start & matured < start + years(1) ~ "maturation",
+        sex == 'M' & matured > start & matured < start + years(1)~ "maturation",
+        sex == 'M' & ranked > start & ranked < start + years(1)~ "ranked",
+        TRUE ~ "no split"))
+
+
+    iyol <- bind_rows(iyol %>% filter(test == "no split")
+                      , iyol %>% filter(test == "maturation") %>%
+                        mutate(end = matured - days(1))
+                      , iyol %>% filter(test == "maturation") %>%
+                        mutate(start = matured)
+                      , iyol %>% filter(test == "ranked") %>%
+                        mutate(end = ranked - days(1))
+                      , iyol %>% filter(test == "ranked") %>%
+                        mutate(start = ranked)) %>%
+      arrange(sname, start)
+  }
+
+  if(.exact_dates == FALSE & .adults_only == FALSE) {
+  message("Currently this makes dataset that goes from birth until statdate with a row per year, ideally it should go from birth until matured for juveniles.")
+  message("Consider using .exact_dates == TRUE")
+  }
+
+
+
+
 
   if (any(iyol$end > last_date)) {
     iyol[iyol$end > last_date, ]$end <- last_date
