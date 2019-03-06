@@ -345,12 +345,26 @@ subset_interactions <- function(babase, members_l, my_acts = NULL, .adults_only 
                (actee_sex == "M" & date >= actee_ranked)) %>%
       tidyr::replace_na(list(is_actor_adult = FALSE, is_actee_adult = FALSE))
 
-    message("We need to concider what to do to sub-adult males")
+    message("We need to concider what to do to sub-adult males in SCI analysis")
   }
+
+    inter <- inter %>%
+      mutate(actee_sex_class = case_when(date < actee_matured | is.na(actee_matured) ~ "JUV",
+                                   sex == "F" & date >= actee_matured ~ "AF",
+                                   sex == "M" & date >= actee_ranked ~ "AM",
+                                   sex == "M" & date >= actee_matured &
+                                     (date < actee_ranked | is.na(actee_ranked))~ "SM"),
+             actor_sex_class = case_when(date < actor_matured | is.na(actor_matured) ~ "JUV",
+                                         sex == "F" & date >= actor_matured ~ "AF",
+                                         sex == "M" & date >= actor_ranked ~ "AM",
+                                         sex == "M" & date >= actor_matured &
+                                           (date < actor_ranked | is.na(actor_ranked))~ "SM"))
 
   inter <- inter %>%
     dplyr::select(iid, sid, act, actor, actee, actor_sex, actee_sex, date,
-                  yearmon, actor_grp, actee_grp, is_actor_adult, is_actee_adult)
+                  yearmon, actor_grp, actee_grp,
+                  is_actor_adult, is_actee_adult,
+                  actee_sex_class, actor_sex_class)
 
   # If user requested grooming data, deal with first-of-month issue
 
