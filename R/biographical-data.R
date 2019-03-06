@@ -568,8 +568,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
   if(.exact_dates == TRUE & .adults_only == FALSE) {
     message("Currently this makes dataset that goes from birth until birth day with the exception of years where the indvidual reaches maturation or is ranked. In those years their is a line from birthday until maturation and maturation until birthday.")
     iyol <- iyol %>%
-      filter(sname == 'ACA' | sname == "ADD") %>%
-      mutate(test = case_when(
+        mutate(test = case_when(
         sex == 'F' & matured > start & matured < start + years(1) ~ "maturation",
         sex == 'M' & matured > start & matured < start + years(1)~ "maturation",
         sex == 'M' & ranked > start & ranked < start + years(1)~ "ranked",
@@ -585,6 +584,7 @@ make_iyol <- function(babase, members_l, focals_l = NULL, interactions_l = NULL,
                         mutate(end = ranked - days(1))
                       , iyol %>% filter(test == "ranked") %>%
                         mutate(start = ranked)) %>%
+      select(-test) %>%
       arrange(sname, start)
   }
 
