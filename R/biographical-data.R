@@ -1,3 +1,7 @@
+.onAttach <- function(libname, pkgname) {
+  packageStartupMessage(paste0("The biographical-data part of the code was last updated on ", Sys.time()))
+}
+
 #' Obtain a subset of members table that excludes behavioral observation gaps.
 #'
 #' @param babase A DBI connection to the babase database
