@@ -1,5 +1,5 @@
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage(paste0("This code was last updated on ", Sys.time()))
+  packageStartupMessage(paste0("The sociality indices code was last updated on ", Sys.time()))
 }
 
 get_mem_dates <- function(my_sub, members_l, df, sel = NULL) {
