@@ -450,7 +450,6 @@ dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l,
   return(my_iyol)
 }
 
-
 #' Obtain dyadic interaction subsets for the animal's year of life
 #'
 #' @param df One row individual-year-of-life data
@@ -538,6 +537,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
 
     # Put some subsets in environment for faster performance
   if (within_grp) {
+    message("This has not yet been coded for juvenile version")
     my_members <- dplyr::filter(members_l, grp == my_grp & date >= my_start & date <= my_end)
 
     # This line allows for the focal animal only to be represented as a non-adult
@@ -574,7 +574,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     if(df$sex_class %in% c("AF", "AM")) {
       my_members <- my_members %>%
         dplyr::filter(sex_class %in% c("AF", "AM"))
-    }
+      }
 
     # This line allows for the focal animal only to be represented as a non-adult
     # my_members <- dplyr::filter(my_members,
@@ -665,6 +665,11 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_subset <- my_subset %>%
       dplyr::filter(sname_sex_class == df$sex_class | partner_sex_class == df$sex_class)
 
+  # Remove all dyads with sub adult males
+  my_subset <- my_subset %>%
+    dplyr::filter(sname_sex_class == "SM" | partner_sex_class == "SM")
+
+
   message("Created my_subset v2")
   ## Co-residence dates
   # Find all dates during which focal and partner co-resided in my_grp
@@ -743,8 +748,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     # Since this is not directional, "F-M" and "M-F" are combined into one category: F-M
     my_subset <- my_subset %>%
       dplyr::rowwise() %>%
-      dplyr::mutate(dyad = paste(sort(c(sname, partner)), collapse = '-'),
-                    dyad_type = paste(sort(c(sname_sex_class, partner_sex_class)), collapse = '-')) %>%
+      # dplyr::mutate(dyad = paste(sort(c(sname, partner)), collapse = '-'),
+      #               dyad_type = paste(sort(c(sname_sex_class, partner_sex_class)), collapse = '-')) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(dyad_type) %>%
       tidyr::nest()
