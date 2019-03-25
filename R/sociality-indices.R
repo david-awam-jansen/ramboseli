@@ -376,8 +376,9 @@ sci <- function(my_iyol, members_l, focals_l, females_l, interactions_l,
 #' @export
 #'
 #' @examples
-dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l, interactions_l,
-                         min_cores_days = 60, within_grp = FALSE, parallel = FALSE,
+dyadic_index <- function(my_iyol, biograph_l, members_l, focals_l, females_l,
+                         interactions_l, min_cores_days = 60,
+                         within_grp = FALSE, parallel = FALSE,
                          ncores = NULL, directional = FALSE) {
 
   ptm <- proc.time()
@@ -570,9 +571,9 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     my_members <- dplyr::filter(members_l, date >= my_start & date <= my_end)
 
     # This block filters out all interactions with juveniles if focal is adult
-    if(df$sex_class %in% c("AM", "AF")) {
+    if(df$sex_class %in% c("AF", "AM")) {
       my_members <- my_members %>%
-        dplyr::filter((is_actor_adult & is_actee_adult) )
+        dplyr::filter(sex_class %in% c("AF", "AM"))
     }
 
     # This line allows for the focal animal only to be represented as a non-adult
@@ -586,7 +587,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     my_interactions <- dplyr::filter(interactions_l, date >= my_start & date <= my_end)
 
     # This block filters out all interactions with juveniles if focal is adult
-    if(df$sex_class %in% c("AM", "AF")) {
+    if(df$sex_class %in% c("AF", "AM")) {
       my_interactions <- interactions_l %>%
         dplyr::filter((is_actor_adult & is_actee_adult) )
     } else {
