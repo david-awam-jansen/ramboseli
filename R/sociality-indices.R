@@ -897,7 +897,8 @@ dyadic_index_summary <- function(df) {
   if (is.null(df) |
       !all(names(df) %in% c("sname", "grp", "start", "end", "days_present", "sex",
                             "birth", "first_start_date", "statdate", "birth_dates",
-                            "midpoint", "age_start_yrs", "age_class", "subset", "di", "obs_date"))) {
+                            "midpoint", "age_start_yrs", "age_class", "sex_class",
+                            "subset", "di", "obs_date"))) {
     stop("Problem with input data. Use the 'dyadic_index' function to create the input.")
   }
 
@@ -928,10 +929,13 @@ dyadic_index_summary <- function(df) {
   if (directional) {
     di_strength <- di_strength %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type %in% c("F-M", "M-F") ~ "DSI_F",
-        sex == "M" & dyad_type == "M-M" ~ "DSI_M",
-        sex == "F" & dyad_type %in% c("F-M", "M-F") ~ "DSI_M",
-        sex == "F" & dyad_type == "F-F" ~ "DSI_F"),
+        sex_class == "AM" & dyad_type %in% c("AF-AM", "AM-AF") ~ "DSI_F",
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "DSI_M",
+        sex_class == "AF" & dyad_type %in% c("AF-AM", "AM-AF") ~ "DSI_M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "DSI_F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AF", "AF-JUV") ~ "DSI_F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AM", "AM-JUV") ~ "DSI_M",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "DSI_J"),
         sex = forcats::fct_recode(sex, Male = "M", Female = "F"),
         DSI_type = paste(DSI_type, direction, sep = "_")) %>%
       dplyr::select(-dyad_type, -direction) %>%
@@ -942,10 +946,13 @@ dyadic_index_summary <- function(df) {
       dplyr::select(-top_partners, -r_strength, -r_reciprocity) %>%
       tidyr::unnest() %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type %in% c("F-M", "M-F") ~ "F",
-        sex == "M" & dyad_type == "M-M" ~ "M",
-        sex == "F" & dyad_type %in% c("F-M", "M-F") ~ "M",
-        sex == "F" & dyad_type == "F-F" ~ "F"),
+        sex_class == "AM" & dyad_type %in% c("AF-AM", "AM-AF") ~ "F",
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "M",
+        sex_class == "AF" & dyad_type %in% c("AF-AM", "AM-AF") ~ "M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AF", "AF-JUV") ~ "F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AM", "AM-JUV") ~ "M",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "J"),
         sex = forcats::fct_recode(sex, Male = "M", Female = "F"),
         DSI_type = paste(DSI_type, direction, sep = "_")) %>%
       dplyr::select(-dyad_type, -direction) %>%
@@ -956,10 +963,13 @@ dyadic_index_summary <- function(df) {
 
     di_recip <- di_recip %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type %in% c("F-M", "M-F") ~ "recip_F",
-        sex == "M" & dyad_type == "M-M" ~ "recip_M",
-        sex == "F" & dyad_type %in% c("F-M", "M-F") ~ "recip_M",
-        sex == "F" & dyad_type == "F-F" ~ "recip_F"),
+        sex_class == "AM" & dyad_type %in% c("AF-AM", "AM-AF") ~ "recip_F",
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "recip_M",
+        sex_class == "AF" & dyad_type %in% c("AF-AM", "AM-AF") ~ "recip_M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "recip_F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AF", "AF-JUV") ~ "recip_F",
+        sex_class == "JUV" & dyad_type %in% c("JUV-AM", "AM-JUV") ~ "recip_M",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "recip_J"),
         sex = forcats::fct_recode(sex, Male = "M", Female = "F"),
         DSI_type = paste(DSI_type, direction, sep = "_")) %>%
       dplyr::select(-dyad_type, -direction) %>%
@@ -968,40 +978,51 @@ dyadic_index_summary <- function(df) {
   } else {
     di_strength <- di_strength %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type == "M-M" ~ "DSI_M",
-        sex == "M" & dyad_type == "F-M" ~ "DSI_F",
-        sex == "F" & dyad_type == "F-M" ~ "DSI_M",
-        sex == "F" & dyad_type == "F-F" ~ "DSI_F"),
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "DSI_M",
+        sex_class == "AM" & dyad_type == "AF-AM" ~ "DSI_F",
+        sex_class == "AF" & dyad_type == "AF-AM" ~ "DSI_M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "DSI_F",
+        sex_class == "JUV" & dyad_type == "AM-JUV" ~ "DSI_M",
+        sex_class == "JUV" & dyad_type == "AF-JUV" ~ "DSI_F",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "DSI_J",
         sex = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::spread(DSI_type, r_strength) %>%
-      dplyr::select(sname, grp, start, end, one_of("DSI_F", "DSI_M"))
+      dplyr::select(sname, grp, start, end, one_of("DSI_F", "DSI_M", "DSI_J"))
 
     di_quantity <- df %>%
       dplyr::select(-top_partners, -r_strength, -r_reciprocity) %>%
       tidyr::unnest() %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type == "M-M" ~ "M",
-        sex == "M" & dyad_type == "F-M" ~ "F",
-        sex == "F" & dyad_type == "F-M" ~ "M",
-        sex == "F" & dyad_type == "F-F" ~ "F"),
-        sex = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "M",
+        sex_class == "AM" & dyad_type == "AF-AM" ~ "F",
+        sex_class == "AF" & dyad_type == "AF-AM" ~ "M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "F",
+        sex_class == "AF" & dyad_type == "AM-JUV" ~ "M",
+        sex_class == "AF" & dyad_type == "AF-JUV" ~ "F",
+        sex_class == "AF" & dyad_type == "JUV-JUV" ~ "J"),),
+        sex_class = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::gather(bond_cat, n_bonds, contains("Bonded")) %>%
       tidyr::unite(var, bond_cat, DSI_type) %>%
       tidyr::spread(var, n_bonds, fill = 0) %>%
-      dplyr::select(sname, grp, start, end, ends_with("_M"), ends_with("_F"))
+      dplyr::select(sname, grp, start, end,
+                    ends_with("_M"), ends_with("_F"), ends_with("_J"))
 
     di_recip <- di_recip %>%
       dplyr::mutate(DSI_type = case_when(
-        sex == "M" & dyad_type == "M-M" ~ "recip_M",
-        sex == "M" & dyad_type == "F-M" ~ "recip_F",
-        sex == "F" & dyad_type == "F-M" ~ "recip_M",
-        sex == "F" & dyad_type == "F-F" ~ "recip_F"),
-        sex = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
+        sex_class == "AM" & dyad_type == "AM-AM" ~ "recip_M",
+        sex_class == "AM" & dyad_type == "AF-AM" ~ "recip_F",
+        sex_class == "AF" & dyad_type == "AF-AM" ~ "recip_M",
+        sex_class == "AF" & dyad_type == "AF-AF" ~ "recip_F",
+        sex_class == "JUV" & dyad_type == "AM-JUV" ~ "recip_M",
+        sex_class == "JUV" & dyad_type == "AF-JUV" ~ "recip_F",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "recip_J"),
+        sex_class = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::spread(DSI_type, r_reciprocity) %>%
-      dplyr::select(sname, grp, start, end, one_of("recip_F", "recip_M"))
+      dplyr::select(sname, grp, start, end,
+                    one_of("recip_F", "recip_M", "recip_J"))
   }
 
   di_summary <- df %>%
