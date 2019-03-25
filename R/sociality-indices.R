@@ -896,7 +896,8 @@ dyadic_index_summary <- function(df) {
   # Return an empty tibble if the subset is empty
   if (is.null(df) |
       !all(names(df) %in% c("sname", "grp", "start", "end", "days_present", "sex",
-                            "birth", "first_start_date", "statdate", "birth_dates",
+                            "birth", "first_start_date", "ranked", "matured",
+                            "statdate", "birth_dates",
                             "midpoint", "age_start_yrs", "age_class", "sex_class",
                             "subset", "di", "obs_date"))) {
     stop("Problem with input data. Use the 'dyadic_index' function to create the input.")
