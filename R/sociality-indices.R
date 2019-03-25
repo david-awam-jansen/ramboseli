@@ -535,7 +535,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_end <- df$end
   my_sex_class <- df$sex_class
 
-  # Put some subsets in environment for faster performance
+    # Put some subsets in environment for faster performance
   if (within_grp) {
     my_members <- dplyr::filter(members_l, grp == my_grp & date >= my_start & date <= my_end)
 
@@ -564,6 +564,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
       dplyr::summarise(days_present = n(),
                        start = min(date),
                        end = max(date))
+
+    message("Creates a subset")
   } else {
     my_members <- dplyr::filter(members_l, date >= my_start & date <= my_end)
 
@@ -629,6 +631,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     #select(-temp) %>%
     filter(sname != partner)
 
+  message("Created dyads")
+
   # Get sex and grp of partner
   # Remove dyads not in same groups
   dyads <- dyads %>%
@@ -660,6 +664,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_subset <- my_subset %>%
       dplyr::filter(sname_sex_class == df$sex_class | partner_sex_class == df$sex_class)
 
+  message("Created my_subset v2")
   ## Co-residence dates
   # Find all dates during which focal and partner co-resided in my_grp
   # Get a count of these dates
@@ -673,6 +678,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     dplyr::ungroup() %>%
     dplyr::filter(coresidence_days >= min_cores_days)
 
+  message("Added dates")
+
   ## Focal counts
   # Get total count of focals during each dyad's co-residence dates
   my_subset <- my_subset %>%
@@ -680,12 +687,16 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
                                              get_focal_counts)) %>%
     dplyr::filter(n_focals > 0)
 
+  message("Added focal counts")
+
   ## Female counts
   # Get average number of females in group during the dyad's co-residence dates
   my_subset <- my_subset %>%
     dplyr::mutate(n_females = purrr::pmap_dbl(list(coresidence_dates, grp),
                                               get_female_counts)) %>%
     dplyr::filter(n_females > 0)
+
+  message("Added female counts")
 
   # Remove coresidence_dates to make object simpler
   my_subset <- dplyr::select(my_subset, -coresidence_dates)
@@ -719,6 +730,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
                                          get_interactions),
            i_total = i_given + i_received)
 
+  message("Added groom counts")
   if (!directional) {
 
     # Calculate variables
@@ -781,10 +793,14 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
       dplyr::group_by(dyad_type) %>%
       tidyr::nest()
 
+    message("Create nested data for regressions")
+
     # Fit regression separately for the different dyad types and get residuals
     my_subset <- my_subset %>%
       dplyr::mutate(data = purrr::map(data, fit_dyadic_regression)) %>%
       tidyr::unnest()
+
+    message("Regressions have been done")
 
     # Reorganize columns
     my_subset <- my_subset %>%
