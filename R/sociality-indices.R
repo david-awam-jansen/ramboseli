@@ -985,7 +985,7 @@ dyadic_index_summary <- function(df) {
         sex_class == "AF" & dyad_type == "AF-AF" ~ "DSI_F",
         sex_class == "JUV" & dyad_type == "AM-JUV" ~ "DSI_M",
         sex_class == "JUV" & dyad_type == "AF-JUV" ~ "DSI_F",
-        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "DSI_J",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "DSI_J"),
         sex = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::spread(DSI_type, r_strength) %>%
@@ -1001,7 +1001,7 @@ dyadic_index_summary <- function(df) {
         sex_class == "AF" & dyad_type == "AF-AF" ~ "F",
         sex_class == "AF" & dyad_type == "AM-JUV" ~ "M",
         sex_class == "AF" & dyad_type == "AF-JUV" ~ "F",
-        sex_class == "AF" & dyad_type == "JUV-JUV" ~ "J"),),
+        sex_class == "AF" & dyad_type == "JUV-JUV" ~ "J"),
         sex_class = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::gather(bond_cat, n_bonds, contains("Bonded")) %>%
