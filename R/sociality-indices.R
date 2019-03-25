@@ -516,7 +516,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   # Return grooming by actor to actee during co-residence dates
   get_interactions <- function(my_actor, my_actee,
                                focal_grp, partner_grp,
-                               f0cal_sex_class, partner_sex_class) {
+                               focal_sex_class, partner_sex_class) {
 
     res <- my_interactions %>%
       dplyr::filter(actor == my_actor &
@@ -618,8 +618,11 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
 
   # For each of these records, find all possible dyad partners
   # Store as new list column and unnest to expand
+   my_subset <- my_subset %>%
+     unite("temp", sname, sname_sex_class, remove = FALSE)
+
+  #
   dyads <- my_subset %>%
-    unite("temp", sname, sname_sex_class, remove = FALSE) %>%
     dplyr::mutate(partner_temp = list(my_subset$temp)) %>%
     unnest() %>%
     separate(partner_temp, c("partner", "partner_sex_class"), remove = FALSE) %>%
@@ -708,12 +711,12 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_subset <- my_subset %>%
     dplyr::mutate(i_given = purrr::pmap_dbl(list(sname, partner,
                                                  grp, partner_grp,
-                                                 sname_sex_clas, partner_sex_class),
-                                     get_interactions),
+                                                 sname_sex_class, partner_sex_class),
+                                      get_interactions),
            i_received = purrr::pmap_dbl(list(partner, sname,
-                                             partner_grp, grp,
-                                             partner_sex_class, sname_sex_class),
-                                        get_interactions),
+                                              partner_grp, grp,
+                                              partner_sex_class, sname_sex_class),
+                                         get_interactions),
            i_total = i_given + i_received)
 
   if (!directional) {
