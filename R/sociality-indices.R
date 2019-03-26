@@ -741,8 +741,8 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
     # Since this is not directional, "F-M" and "M-F" are combined into one category: F-M
     my_subset <- my_subset %>%
       dplyr::rowwise() %>%
-      # dplyr::mutate(dyad = paste(sort(c(sname, partner)), collapse = '-'),
-      #               dyad_type = paste(sort(c(sname_sex_class, partner_sex_class)), collapse = '-')) %>%
+       dplyr::mutate(dyad = paste(sort(c(sname, partner)), collapse = '-'),
+                     dyad_type = paste(sort(c(sname_sex_class, partner_sex_class)), collapse = '-')) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(dyad_type) %>%
       tidyr::nest()
