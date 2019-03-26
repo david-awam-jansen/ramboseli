@@ -535,6 +535,11 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
   my_end <- df$end
   my_sex_class <- df$sex_class
 
+  if (my_sex_class == "SM") {
+    message("Social indexes are not calculated for sub adult males")
+    return(dplyr::tbl_df(NULL))
+  }
+
     # Put some subsets in environment for faster performance
   if (within_grp) {
     message("This has not yet been coded for juvenile version")
@@ -664,7 +669,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
 
   # Remove all dyads with sub adult males
   my_subset <- my_subset %>%
-    dplyr::filter(sname_sex_class == "SM" | partner_sex_class == "SM")
+    dplyr::filter(!(sname_sex_class == "SM" | partner_sex_class == "SM"))
 
   ## Co-residence dates
   # Find all dates during which focal and partner co-resided in my_grp
