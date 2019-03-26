@@ -999,9 +999,9 @@ dyadic_index_summary <- function(df) {
         sex_class == "AM" & dyad_type == "AF-AM" ~ "F",
         sex_class == "AF" & dyad_type == "AF-AM" ~ "M",
         sex_class == "AF" & dyad_type == "AF-AF" ~ "F",
-        sex_class == "AF" & dyad_type == "AM-JUV" ~ "M",
-        sex_class == "AF" & dyad_type == "AF-JUV" ~ "F",
-        sex_class == "AF" & dyad_type == "JUV-JUV" ~ "J"),
+        sex_class == "JUV" & dyad_type == "AM-JUV" ~ "M",
+        sex_class == "JUV" & dyad_type == "AF-JUV" ~ "F",
+        sex_class == "JUV" & dyad_type == "JUV-JUV" ~ "J"),
         sex_class = forcats::fct_recode(sex, Male = "M", Female = "F")) %>%
       dplyr::select(-dyad_type) %>%
       tidyr::gather(bond_cat, n_bonds, contains("Bonded")) %>%
