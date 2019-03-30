@@ -596,7 +596,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
         dplyr::filter((is_actor_adult & is_actee_adult) )
     } else {
       # This block filters out all interactions with only adults if focal is juvenile
-      my_interactions <- interactions_l %>%
+      my_interactions <- my_interactions %>%
         dplyr::filter(!(is_actor_adult & is_actee_adult))
     }
 
