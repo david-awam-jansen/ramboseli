@@ -83,9 +83,6 @@ get_sci_subset <- function(df, members_l, focals_l, females_l, interactions_l,
                      start = min(date),
                      end = max(date))
 
-# This needs to be checked.
-message("Was this checked")
-
   # To allow animals to be non-adults only if focal is not adults
   # Should not  affect results for adults
   if(df$sex_class %in% c("AM", "AF")) {
@@ -95,6 +92,26 @@ message("Was this checked")
     my_interactions <- interactions_l %>%
     dplyr::filter(!(is_actor_adult & is_actee_adult))
   }
+
+  my_interactions <- my_interactions %>%
+    dplyr::filter(actor %in% my_subset$sname |
+                  actee %in% my_subset$sname) %>%
+    dplyr::filter(date >= df$start & date <= df$end)
+
+  moms <- biograph_l %>%
+  select(sname, pid)  %>%
+  mutate(mom = str_sub(pid,1,3))
+
+  my_interactions_mom_excluded <- my_interactions %>%
+    filter(actor_sex_class == "AF" | actee_sex_class == "AF") %>%
+    left_join(select(moms, actor = sname, actor_mom = mom), by = "actor") %>%
+    left_join(select(moms, actee = sname, actee_mom = mom), by = "actee") %>%
+    filter(!(actor_sex_class == "JUV" & is.na(actor_mom)) |
+             !(actee_sex_class == "JUV" & is.na(actee_mom))) %>%
+    mutate(maternal_grooms = actor == actee_mom | actee == actor_mom) %>%
+    filter(maternal_grooms == FALSE)
+
+
 
   ## Focal counts
   # Get all focals during relevant time period in grp
@@ -178,7 +195,19 @@ message("Was this checked")
       dplyr::group_by(grp, sname) %>%
       dplyr::summarise(IfromJ = n())
 
+    ## Interactions given to juveniles by females that are not their mom
+    gg_fme <- get_interaction_dates(my_subset, members_l, my_interactions_mom_excluded,
+                                  quo(actee_sex), "actor", "F", TRUE) %>%
+      dplyr::group_by(grp, sname) %>%
+      dplyr::summarise(ItoFme = n())
+
+    ## Interactions received from females by that are not their mom
+    gr_fme <- get_interaction_dates(my_subset, members_l, my_interactions,
+                                  quo(actor_sex), "actee", "F", TRUE) %>%
+      dplyr::group_by(grp, sname) %>%
+      dplyr::summarise(IfromFme = n())
   }
+
 
   my_subset <- my_subset %>%
     dplyr::left_join(gg_f, by = c("grp", "sname")) %>%
@@ -199,10 +228,13 @@ message("Was this checked")
   if (df$sex_class == 'JUV') {
     my_subset <- my_subset %>%
       dplyr::left_join(gg_j, by = c("grp", "sname")) %>%
-      dplyr::left_join(gr_j, by = c("grp", "sname"))
+      dplyr::left_join(gr_j, by = c("grp", "sname")) %>%
+      dplyr::left_join(gg_fme, by = c("grp", "sname")) %>%
+      dplyr::left_join(gr_fme, by = c("grp", "sname"))
 
     my_subset <- my_subset %>%
-      tidyr::replace_na(list(ItoJ = 0, IfromJ = 0))
+      tidyr::replace_na(list(ItoJ = 0, IfromJ = 0)) %>%
+      tidyr::replace_na(list(ItoFme = 0, IfromFme = 0))
   }
 
   # Calculate variables, first for interactions with females only
@@ -237,7 +269,15 @@ message("Was this checked")
                     IfromJ_daily = IfromJ / days_present,
                     log2IfromJ_daily = dplyr::case_when(
                       IfromJ == 0 ~ log_zero_daily_count,
-                      TRUE ~ log2(IfromJ_daily)))
+                      TRUE ~ log2(IfromJ_daily))) %>%
+      dplyr::mutate(ItoFme_daily = ItoFme / days_present,
+                    log2ItoFme_daily = dplyr::case_when(
+                      ItoFme == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(ItoFme_daily)),
+                    IfromFme_daily = IfromFme / days_present,
+                    log2IfromFme_daily = dplyr::case_when(
+                      IfromFme == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(IfromFme_daily)))
   }
 
   my_subset$SCI_F_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoF_daily ~ log2OE)))
@@ -251,6 +291,8 @@ message("Was this checked")
   if (df$sex_class == "JUV") {
     my_subset$SCI_J_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoJ_daily ~ log2OE)))
     my_subset$SCI_J_Rec <- as.numeric(residuals(lm(data = my_subset, log2IfromJ_daily ~ log2OE)))
+    my_subset$SCI_Fme_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoFme_daily ~ log2OE)))
+    my_subset$SCI_Fme_Rec <- as.numeric(residuals(lm(data = my_subset, log2IfromFme_daily ~ log2OE)))
   }
 
   if (!directional) {
@@ -260,6 +302,7 @@ message("Was this checked")
     }
     if (df$sex_class == "JUV") {
       my_subset$SCI_J <- (my_subset$SCI_J_Dir + my_subset$SCI_J_Rec) / 2
+      my_subset$SCI_Fme <- (my_subset$SCI_Fme_Dir + my_subset$SCI_Fme_Rec) / 2
     }
   }
 
@@ -813,6 +856,7 @@ get_dyadic_subset <- function(df, biograph_l, members_l, focals_l, females_l,
 #' @param df A subset of data on which to fit a regression of interactions on observer effort.
 #'
 #' @return The input data with an additional column containing the regression residuals.
+#' @export
 #'
 #' @examples
 fit_dyadic_regression <- function(df) {
