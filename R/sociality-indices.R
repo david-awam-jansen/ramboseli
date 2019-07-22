@@ -81,7 +81,8 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
     dplyr::group_by(sname, grp, sex_class) %>%
     dplyr::summarise(days_present = n(),
                      start = min(date),
-                     end = max(date))
+                     end = max(date)) %>%
+    ungroup()
 
   # To allow animals to be non-adults only if focal is not adults
   # Should not  affect results for adults
@@ -120,25 +121,25 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
   ## Observation days
   # Focal animal was present and at least one focal sample was collected
   obs_days <- my_focals %>%
-    group_by(grp, sname) %>%
+    group_by(grp, sname, sex_class) %>%
     summarise(days_observed = n())
 
   my_subset <- my_subset %>%
-    left_join(obs_days, by = c("sname", "grp"))
+    left_join(obs_days, by = c("sname", "grp", "sex_class"))
 
   my_focals <- my_focals %>%
-    dplyr::group_by(grp, sname) %>%
+    dplyr::group_by(grp, sname, sex_class) %>%
     dplyr::summarise(n_focals = sum(sum))
 
   ## Female counts
   my_females <- get_mem_dates(my_subset, my_members, females_l, sel = quo(nr_females)) %>%
-    dplyr::group_by(grp, sname) %>%
+    dplyr::group_by(grp, sname, sex_class) %>%
     dplyr::summarise(mean_f_count = mean(nr_females))
 
   # Join back to my_subset to add n_focals column
   my_subset <- my_subset %>%
-    dplyr::left_join(my_focals, by = c("grp", "sname")) %>%
-    dplyr::left_join(my_females, by = c("grp", "sname"))
+    dplyr::left_join(my_focals, by = c("grp", "sname", "sex_class")) %>%
+    dplyr::left_join(my_females, by = c("grp", "sname", "sex_class"))
 
   if (nrow(my_subset) == 0 | nrow(my_focals) == 0 | nrow(my_females) == 0) {
     return(dplyr::tbl_df(NULL))
@@ -246,7 +247,6 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
     my_subset <- my_subset %>%
       mutate(ItJ = ItoJ + IfromJ) %>%
       mutate(ItFme = ItoFme + IfromFme)
-
   }
 
 
