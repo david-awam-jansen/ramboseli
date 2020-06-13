@@ -104,7 +104,7 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
   mutate(mom = str_sub(pid,1,3))
 
   dads <- biograph_l %>%
-    select(sname = kid, dad)
+    select(sname, dad)
 
   my_interactions_mom_excluded <- my_interactions %>%
     filter(actor_sex_class == "AF" | actee_sex_class == "AF") %>%
