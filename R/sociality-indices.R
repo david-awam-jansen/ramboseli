@@ -102,6 +102,9 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
   moms <- biograph_l %>%
   select(sname, pid)  %>%
   mutate(mom = str_sub(pid,1,3))
+  
+  dads <- parents_l %>%
+    select(sname = kid, dad)  
 
   my_interactions_mom_excluded <- my_interactions %>%
     filter(actor_sex_class == "AF" | actee_sex_class == "AF") %>%
@@ -111,8 +114,15 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
              !(actee_sex_class == "JUV" & is.na(actee_mom))) %>%
     mutate(maternal_grooms = actor == actee_mom | actee == actor_mom) %>%
     filter(maternal_grooms == FALSE)
-
-
+  
+  my_interactions_dad_excluded <- my_interactions %>%
+    filter(actor_sex_class == "AM" | actee_sex_class == "AM") %>%
+    left_join(select(dads, actor = sname, actor_dad = dad), by = "actor") %>%
+    left_join(select(dads, actee = sname, actee_dad = dad), by = "actee") %>%
+    filter(!(actor_sex_class == "JUV" & is.na(actor_dad)) |
+             !(actee_sex_class == "JUV" & is.na(actee_dad))) %>%
+    mutate(paternal_grooms = actor == actee_dad | actee == actor_dad) %>%
+    filter(paternal_grooms == FALSE)
 
   ## Focal counts
   # Get all focals during relevant time period in grp
@@ -203,10 +213,22 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
       dplyr::summarise(ItoFme = n())
 
     ## Interactions received from females by that are not their mom
-    gr_fme <- get_interaction_dates(my_subset, members_l, my_interactions,
+    gr_fme <- get_interaction_dates(my_subset, members_l, my_interactions_mom_excluded,
                                   quo(actor_sex), "actee", "F", TRUE) %>%
       dplyr::group_by(grp, sname) %>%
       dplyr::summarise(IfromFme = n())
+    
+    ## Interactions given to juveniles by females that are not their mom
+    gg_mde <- get_interaction_dates(my_subset, members_l, my_interactions_dad_excluded,
+                                    quo(actee_sex), "actor", "M", TRUE) %>%
+      dplyr::group_by(grp, sname) %>%
+      dplyr::summarise(ItoMde = n())
+    
+    ## Interactions received from females by that are not their mom
+    gr_mde <- get_interaction_dates(my_subset, members_l, my_interactions_dad_excluded,
+                                    quo(actor_sex), "actee", "M", TRUE) %>%
+      dplyr::group_by(grp, sname) %>%
+      dplyr::summarise(IfromMde = n())
   }
 
 
@@ -238,15 +260,19 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
       dplyr::left_join(gg_j, by = c("grp", "sname")) %>%
       dplyr::left_join(gr_j, by = c("grp", "sname")) %>%
       dplyr::left_join(gg_fme, by = c("grp", "sname")) %>%
-      dplyr::left_join(gr_fme, by = c("grp", "sname"))
+      dplyr::left_join(gr_fme, by = c("grp", "sname")) %>%
+      dplyr::left_join(gg_mde, by = c("grp", "sname")) %>%
+      dplyr::left_join(gr_mde, by = c("grp", "sname"))
 
     my_subset <- my_subset %>%
       tidyr::replace_na(list(ItoJ = 0, IfromJ = 0)) %>%
-      tidyr::replace_na(list(ItoFme = 0, IfromFme = 0))
+      tidyr::replace_na(list(ItoFme = 0, IfromFme = 0)) %>% 
+      tidyr::replace_na(list(ItoMde = 0, IfromMde = 0))
 
     my_subset <- my_subset %>%
       mutate(ItJ = ItoJ + IfromJ) %>%
-      mutate(ItFme = ItoFme + IfromFme)
+      mutate(ItFme = ItoFme + IfromFme) %>% 
+      mutate(ItMde = ItoMde + IfromMde)
   }
 
 
@@ -307,7 +333,19 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
                     ItFme_daily = ItFme / days_present,
                     log2ItFme_daily = dplyr::case_when(
                       ItFme == 0 ~ log_zero_daily_count,
-                      TRUE ~ log2(ItFme_daily)))
+                      TRUE ~ log2(ItFme_daily))) %>% 
+      dplyr::mutate(ItoMde_daily = ItoMde / days_present,
+                    log2ItoMde_daily = dplyr::case_when(
+                      ItoMde == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(ItoMde_daily)),
+                    IfromMde_daily = IfromMde / days_present,
+                    log2IfromMde_daily = dplyr::case_when(
+                      IfromMde == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(IfromMde_daily)),
+                    ItMde_daily = ItMde / days_present,
+                    log2ItMde_daily = dplyr::case_when(
+                      ItMde == 0 ~ log_zero_daily_count,
+                      TRUE ~ log2(ItMde_daily)))
   }
 
   my_subset$SCI_F_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoF_daily ~ log2OE)))
@@ -328,6 +366,10 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
     my_subset$SCI_Fme_Rec <- as.numeric(residuals(lm(data = my_subset,
                                                      log2IfromFme_daily ~ log2OE)))
     my_subset$SCI_Fme_tot <- as.numeric(residuals(lm(data = my_subset, log2ItFme_daily ~ log2OE)))
+    my_subset$SCI_Mde_Dir <- as.numeric(residuals(lm(data = my_subset, log2ItoMde_daily ~ log2OE)))
+    my_subset$SCI_Mde_Rec <- as.numeric(residuals(lm(data = my_subset,
+                                                     log2IfromMde_daily ~ log2OE)))
+    my_subset$SCI_Mde_tot <- as.numeric(residuals(lm(data = my_subset, log2ItMde_daily ~ log2OE)))
   }
 
   if (!directional) {
@@ -338,6 +380,7 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
     if (df$sex_class == "JUV") {
       my_subset$SCI_J <- (my_subset$SCI_J_Dir + my_subset$SCI_J_Rec) / 2
       my_subset$SCI_Fme <- (my_subset$SCI_Fme_Dir + my_subset$SCI_Fme_Rec) / 2
+      my_subset$SCI_Mde <- (my_subset$SCI_Mde_Dir + my_subset$SCI_Mde_Rec) / 2
     }
   }
 
@@ -360,9 +403,12 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
 #' @export
 #'
 #' @examples
+i = 1
 sci <- function(my_iyol, biograph_l, members_l, focals_l, females_l, interactions_l,
                 min_res_days = 60, parallel = FALSE, ncores = NULL,
                 directional = FALSE) {
+  print(i)
+  i <- i + 1
 
   ptm <- proc.time()
 
