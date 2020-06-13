@@ -102,9 +102,9 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
   moms <- biograph_l %>%
   select(sname, pid)  %>%
   mutate(mom = str_sub(pid,1,3))
-  
-  dads <- parents_l %>%
-    select(sname = kid, dad)  
+
+  dads <- biograph_l %>%
+    select(sname = kid, dad)
 
   my_interactions_mom_excluded <- my_interactions %>%
     filter(actor_sex_class == "AF" | actee_sex_class == "AF") %>%
@@ -114,7 +114,7 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
              !(actee_sex_class == "JUV" & is.na(actee_mom))) %>%
     mutate(maternal_grooms = actor == actee_mom | actee == actor_mom) %>%
     filter(maternal_grooms == FALSE)
-  
+
   my_interactions_dad_excluded <- my_interactions %>%
     filter(actor_sex_class == "AM" | actee_sex_class == "AM") %>%
     left_join(select(dads, actor = sname, actor_dad = dad), by = "actor") %>%
@@ -217,13 +217,13 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
                                   quo(actor_sex), "actee", "F", TRUE) %>%
       dplyr::group_by(grp, sname) %>%
       dplyr::summarise(IfromFme = n())
-    
+
     ## Interactions given to juveniles by females that are not their mom
     gg_mde <- get_interaction_dates(my_subset, members_l, my_interactions_dad_excluded,
                                     quo(actee_sex), "actor", "M", TRUE) %>%
       dplyr::group_by(grp, sname) %>%
       dplyr::summarise(ItoMde = n())
-    
+
     ## Interactions received from females by that are not their mom
     gr_mde <- get_interaction_dates(my_subset, members_l, my_interactions_dad_excluded,
                                     quo(actor_sex), "actee", "M", TRUE) %>%
@@ -266,12 +266,12 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
 
     my_subset <- my_subset %>%
       tidyr::replace_na(list(ItoJ = 0, IfromJ = 0)) %>%
-      tidyr::replace_na(list(ItoFme = 0, IfromFme = 0)) %>% 
+      tidyr::replace_na(list(ItoFme = 0, IfromFme = 0)) %>%
       tidyr::replace_na(list(ItoMde = 0, IfromMde = 0))
 
     my_subset <- my_subset %>%
       mutate(ItJ = ItoJ + IfromJ) %>%
-      mutate(ItFme = ItoFme + IfromFme) %>% 
+      mutate(ItFme = ItoFme + IfromFme) %>%
       mutate(ItMde = ItoMde + IfromMde)
   }
 
@@ -333,7 +333,7 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
                     ItFme_daily = ItFme / days_present,
                     log2ItFme_daily = dplyr::case_when(
                       ItFme == 0 ~ log_zero_daily_count,
-                      TRUE ~ log2(ItFme_daily))) %>% 
+                      TRUE ~ log2(ItFme_daily))) %>%
       dplyr::mutate(ItoMde_daily = ItoMde / days_present,
                     log2ItoMde_daily = dplyr::case_when(
                       ItoMde == 0 ~ log_zero_daily_count,
