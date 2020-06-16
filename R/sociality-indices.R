@@ -124,7 +124,6 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
              !(actee_sex_class == "JUV" & is.na(actee_dad))) %>%
     mutate(paternal_grooms = case_when(actor_sex_class == "JUV" ~ actee == actor_dad,
                                        actee_sex_class == "JUV" ~ actor == actee_dad)) %>%
-    select(contains("actor"), contains("actee"), paternal_grooms) %>%
     filter(paternal_grooms == FALSE)
 
   ## Focal counts
