@@ -119,9 +119,12 @@ get_sci_subset <- function(df, biograph_l, members_l, focals_l, females_l, inter
     filter(actor_sex_class == "AM" | actee_sex_class == "AM") %>%
     left_join(select(dads, actor = sname, actor_dad = dad), by = "actor") %>%
     left_join(select(dads, actee = sname, actee_dad = dad), by = "actee") %>%
+    filter(actor_sex_class == "JUV" | actee_sex_class == "JUV") %>%
     filter(!(actor_sex_class == "JUV" & is.na(actor_dad)) |
              !(actee_sex_class == "JUV" & is.na(actee_dad))) %>%
-    mutate(paternal_grooms = actor == actee_dad | actee == actor_dad) %>%
+    mutate(paternal_grooms = case_when(actor_sex_class == "JUV" ~ actee == actor_dad,
+                                       actee_sex_class == "JUV" ~ actor == actee_dad)) %>%
+    select(contains("actor"), contains("actee"), paternal_grooms) %>%
     filter(paternal_grooms == FALSE)
 
   ## Focal counts
